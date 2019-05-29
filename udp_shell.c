@@ -12,14 +12,17 @@ int main(int argc, char *argv[]){
 	const char *host = "127.0.0.1";
 	int port = 9999;
 
+	/* Set up sockaddr struct */
 	struct sockaddr_in address;
 	address.sin_family = AF_INET;
 	address.sin_port = htons(port);
 	inet_aton(host, &address.sin_addr);
 
+	/* Connect */
 	int s = socket(AF_INET, SOCK_DGRAM, 0);
 	connect(s, (struct sockaddr*)&address, sizeof(address));
-
+	
+	/* Send initial message (there is no SYN in UDP) */
 	char buf[20];
 	strcpy(buf, "Starting UDP shell\n");
 	sendto(s, &buf, strlen(buf)+1, 0, (struct sockaddr*)&address, sizeof(address));
