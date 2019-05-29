@@ -18,7 +18,7 @@ int main(int argc, char *argv[]){
 	int s = socket(AF_INET, SOCK_DGRAM, 0);
 	connect(s, (struct sockaddr*)&address, sizeof(address));
 
-	char buf[19];
+	char buf[20];
 	strcpy(buf, "Starting UDP shell\n");
 	sendto(s, &buf, strlen(buf)+1, 0, (struct sockaddr*)&address, sizeof(address));
 
