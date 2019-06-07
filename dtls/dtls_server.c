@@ -58,7 +58,7 @@ int generate_cookie(SSL *ssl, unsigned char *cookie, unsigned int *cookie_len){
 	return 1;
 }
 
-/* Simple cookie verification callback function */
+/* Simple cookie verification function */
 int verify_cookie(SSL *ssl, unsigned char *cookie, unsigned int cookie_len){
 	if(connected == 1){
 		unsigned char digest[MD5_DIGEST_LENGTH ];
@@ -104,6 +104,7 @@ int main(){
 	}
 	if(!SSL_CTX_check_private_key(ctx)){
 		printf("\n[-] ERROR: invalid private key!\n");
+		exit(-1);
 	}
 
 	/* Set context options */
@@ -176,7 +177,7 @@ int main(){
 	while(!(SSL_get_shutdown(ssl) & SSL_RECEIVED_SHUTDOWN)){
 		
 		/* Read input command and send */ 
-		error = get_input_line("$ ", cmd, 2048);
+		error = get_input_line("\n$ ", cmd, 2048);
 		if(error == TOO_LONG){
 			printf("[-] Input too long. Try again.\n");
 			continue;
@@ -186,10 +187,11 @@ int main(){
 		}
 		error = SSL_write(ssl, cmd, strlen(cmd));
 		if(error <= 0){
-			SSL_get_error(ssl, error);
+			printf("[-] Error sending command\n");
 			continue;
 		}
 
+		/* End of session */
 		if(strcmp(cmd, "exit") == 0){
 			break;
 		}
@@ -199,15 +201,17 @@ int main(){
 
 			error = SSL_get_error(ssl, len);
 
-			/* End of message */
-			if(len == 1){
-				break;
-			}
-
 			if(error != SSL_ERROR_NONE){
 				printf("[-] SSL error.\n");
+				continue;
 			} else {
-				printf("%.*s", len, response);
+
+				/* End of message */
+				if(strcmp(response, "") == 0){
+					break;
+				} else {
+					printf("%.*s", len, response);
+				}
 			}
 		}
 	}
